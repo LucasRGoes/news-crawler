@@ -1,0 +1,26 @@
+{
+  "name": "news-crawler",
+  "version": "1.0.0",
+  "description": "Module responsible from crawling news and formatting in a specific data model",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "news",
+    "crawler",
+    "database",
+    "nosql",
+    "data-model"
+  ],
+  "author": "Lucas Góes",
+  "license": "ISC",
+  "dependencies": {
+    "args-parser": "^1.1.0",
+    "cheerio": "^1.0.0-rc.2",
+    "newsapi": "^2.2.2",
+    "puppeteer": "^1.3.0",
+    "request": "^2.85.0",
+    "request-promise-native": "^1.0.5"
+  }
+}
