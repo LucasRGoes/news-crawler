@@ -3,8 +3,8 @@
 /**************
  * LIBRARIES
  **************/
-const puppeteer = require('puppeteer');				// puppeteer: Is a Node library which provides a high-level API to control headless Chrome or Chromium over the DevTools Protocol
 const cheerio = require('cheerio')					// cheerio: Fast, flexible & lean implementation of core jQuery designed specifically for the server
+const puppeteer = require('puppeteer');				// puppeteer: Is a Node library which provides a high-level API to control headless Chrome or Chromium over the DevTools Protocol
 const request = require('request-promise-native')	// request: Is designed to be the simplest way possible to make http calls
 
 /**************
@@ -58,28 +58,26 @@ class UolNewsCrawler {
 			body = cheerio.load(body)
 
 			// Stores the links on the feed
-			let newsLinks = UolNewsCrawler._getNewsLinks(body)
+			let newsLinks = UolNewsCrawler._getNewsLinks(body, category)
 			console.info(`[INFO] [UolNewsCrawler]: Page ${currentPage} has been fetched (${page.url()})`)
 
-			// // For each of the links found
-			// for(let currentNews of newsLinks) {
+			// For each of the links found
+			for(let currentNews of newsLinks) {
 
-			// 	// Builds options for the next news
-			// 	requestOptions = {
-			// 		"uri": currentNews,
-			// 		transform: body => cheerio.load(body)
-			// 	}
+				// Builds options for the next news
+				let requestOptions = {
+					"uri": currentNews,
+					transform: body => cheerio.load(body)
+				}
 
-			// 	// Makes request and stores the content
-			// 	let tempContent = G1NewsCrawler._getNewsContent(await request(requestOptions))
-			// 	tempContent["category"] = category
-			// 	content.push(tempContent)
+				// Makes request and stores the content
+				let tempContent = UolNewsCrawler._getNewsContent(await request(requestOptions))
+				tempContent["category"] = category
+				content.push(tempContent)
 
-			// }
+			}
 
-			console.log(newsLinks)
-
-			console.info(`[INFO] [G1NewsCrawler]: Content from page ${currentPage} retrieved`)
+			console.info(`[INFO] [UolNewsCrawler]: Content from page ${currentPage} retrieved`)
 
 			// Goes to next page
 			await page.click(".next")
@@ -99,13 +97,28 @@ class UolNewsCrawler {
 		
 	}
 
-	static _getNewsLinks($) {
+	static _getNewsLinks($, category) {
 		
-		// Get all news with the specific class
-		let newsFeed = $("section").attr("id", "conteudo-principal")
-		
+		// Parsing linkBeingUsed
+		let linkReference = ""
+		switch(category) {
 
-		console.log(newsFeed)
+			case "economy":
+				linkReference = "economia.uol.com.br"
+				break
+
+			case "technology":
+				linkReference = "tecnologia.uol.com.br"
+				break
+
+			default:
+				linkReference = "noticias.uol.com.br"
+				break
+
+		}
+
+		// Get all news with the specific class
+		let newsFeed = $(".news")
 
 		// Fetch links from the news feed
 		let links = []
@@ -114,10 +127,10 @@ class UolNewsCrawler {
 			// Verify if it has a link and is valid
 			let tempNews = undefined
 			try {
-				tempNews = $(newsFeed[i]).attr("href")
+				tempNews = $(newsFeed[i]).find("a").attr("href")
 			} catch(err) {}
 
-			if(tempNews !== undefined && tempNews.includes("uol.com.br")) {
+			if(tempNews !== undefined && tempNews.indexOf(linkReference) > -1) {
 				links.push(tempNews)
 			}
 
@@ -133,24 +146,17 @@ class UolNewsCrawler {
 		let content = {}
 
 		// Getting published time
-		let datePublished = $("time").attr("itemprop", "datePublished")
+		let datePublished = $("time")
 		content["datePublished"] = new Date($(datePublished).attr("datetime")).getTime()
 
-		// Getting modified time
-		let dateModified = $("time").attr("itemprop", "dateModified")
-		content["dateModified"] = new Date($(dateModified).attr("datetime")).getTime()
-
 		// Getting headline
-		let headline = $(".content-head__title").attr("itemprop", "headline")
+		let headline = $("h1[class=pg-color10]")
 		content["headline"] = $(headline).text()
 
-		// Getting subtitle
-		let subtitle = $(".content-head__subtitle").attr("itemprop", "alternativeHeadline")
-		content["subtitle"] = $(subtitle).text()
-
 		// Getting content
-		content["content"] = $(".content-text__container").text()
-
+		let contentText = 
+		content["content"] = $("article").find("div[id=texto] > p").text()
+		
 		return content
 
 	}

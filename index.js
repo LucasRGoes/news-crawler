@@ -4,8 +4,7 @@
  * LIBRARIES
  **************/
 const Args = require("args-parser")(process.argv)			 // Straight-forward node.js arguments parser
-
-const G1NewsCrawler = require("./src/crawlers/g1-news-crawler")
+const NewsCrawler = require("./src/main/news-crawler")
 
 /**************
  * FUNCTIONS
@@ -51,7 +50,7 @@ const argsHandler = () => {
  **************/
 argsHandler();
 
-G1NewsCrawler.fetchNews(Args["category"], Args["from-page"], Args["number-pages"])
+NewsCrawler.fetchNews(Args["category"], Args["from-page"], Args["number-pages"])
 	.then(response => process.exit())
 	.catch(error => {
 		console.log(error)
