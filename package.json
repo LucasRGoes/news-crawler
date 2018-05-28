@@ -1,6 +1,6 @@
 {
   "name": "news-crawler",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Module responsible from crawling news and formatting in a specific data model",
   "main": "index.js",
   "scripts": {
