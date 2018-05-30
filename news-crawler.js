@@ -1,32 +1,87 @@
-'use strict'
+'use strict';
 
-/**************
- * LIBRARIES
- **************/
-const G1NewsCrawler = require("../crawlers/g1-news-crawler")
-const UolNewsCrawler = require("../crawlers/uol-news-crawler")
+/* REQUIRES */
+const { CrawlerFactory } = require('./crawlers');					// CrawlerFactory: Generates crawlers with transparency.
+const { createLogger, format, transports } = require('winston');	// Winston: A logger for just about everything.
+const { combine, timestamp, label, printf } = format;
 
+/* CLASS */
 class NewsCrawler {
 
-	static async fetchNews(category, fromPage = 1, numberPages = 10) {
+	constructor() {
+
+		// Creates a custom format for the logger
+		const customFormat = printf( info => {
+			return `${info.timestamp} [${info.label}] [${info.level}]: ${info.message}`;
+		});
+
+		this._logger = createLogger({
+			format: combine(
+				label({ label: 'NewsCrawler' }),
+				timestamp(),
+				customFormat
+			),
+			transports: [
+				new transports.Console()
+			]
+		});
+
+	}
+
+	async fetchNews(source, category, fromPage = 1, numberPages = 10) { // jshint ignore:line
 		
-		// Instantiates variable to hold content
-		let content = []
+		/* Verifying variables */
+		if(Array.isArray(source)) {
 
-		/* CRAWLERS */
+			for(let s of source) {
+				if(!this.sourceAvailable(s)) {
+					throw TypeError( `source ${source} not available` );
+				}
+			}
 
-		// G1
-		let tempContent = await G1NewsCrawler.fetchNews(category, fromPage, numberPages)
-		if(tempContent !== null) { content = content.concat(tempContent) }
+		} else {
 
-		// Uol
-		tempContent = await UolNewsCrawler.fetchNews(category, fromPage, numberPages)
-		if(tempContent !== null) { content = content.concat(tempContent) }
+			if(!this.sourceAvailable(source)) {
+				throw TypeError( `source ${source} not available` );
+			}
 
-		return content
+			source = [source];
 
+		}
+
+		if(fromPage <= 0) {
+			throw RangeError( `fromPage needs to be higher than zero` );
+		}
+
+		// Fetching sources
+		let news = new Set();
+		for(let s of source) {
+
+			this._logger.info( `Fetching from '${s}' ...` );
+			const crawler = CrawlerFactory.createCrawler(s);
+			try {
+
+				const fetchedNews = await crawler.fetchNews(category, fromPage, numberPages); // jshint ignore:line
+				news = new Set([ news, fetchedNews ]);
+
+			} catch(error) {
+				this._logger.error( `Source '${s}'' couldn't be fetched`, error );
+			}
+
+		}
+
+		return news;
+
+	}
+
+	sourceAvailable(source) {
+		return this.sources.indexOf(source) > -1;
+	}
+
+	get sources() {
+		return ['g1'];
 	}
 
 }
 
-module.exports = NewsCrawler
+module.exports = NewsCrawler;

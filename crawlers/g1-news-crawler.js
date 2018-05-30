@@ -1,26 +1,32 @@
 'use strict';
 
 /* REQUIRES */
-const cheerio = require('cheerio');					// Cheerio: Fast, flexible & lean implementation of core jQuery designed specifically for the server.
-const request = require('request-promise-native');	// Request: The simplified HTTP request client 'request' with Promise support.
-const winston = require('winston');					// Winston: A logger for just about everything.
+const cheerio = require('cheerio');									// Cheerio: Fast, flexible & lean implementation of core jQuery designed specifically for the server.
+const request = require('request-promise-native');					// Request: The simplified HTTP request client 'request' with Promise support.
+const { createLogger, format, transports } = require('winston');	// Winston: A logger for just about everything.
+const { combine, timestamp, label, printf } = format;
 
 /* CLASS */
 class G1NewsCrawler {
 
 	constructor() {
 
-		this._logger = winston.createLogger({
-			format: winston.format.simple(),
+		// Creates a custom format for the logger
+		const customFormat = printf( info => {
+			return `${info.timestamp} [${info.label}] [${info.level}]: ${info.message}`;
+		});
+
+		this._logger = createLogger({
+			format: combine(
+				label({ label: 'G1NewsCrawler' }),
+				timestamp(),
+				customFormat
+			),
 			transports: [
-				new winston.transports.Console()
+				new transports.Console()
 			]
 		});
 
-	}
-
-	categoryAvailable(category) {
-		return this.categories.indexOf(category) > -1;
 	}
 
 	async fetchNews(category, fromPage = 1, numberPages = 10) { // jshint ignore:line
@@ -85,6 +91,10 @@ class G1NewsCrawler {
 
 	}
 
+	categoryAvailable(category) {
+		return this.categories.indexOf(category) > -1;
+	}
+
 	get categories() {
 		return ['economy', 'health&science', 'politics', 'technology', 'world'];
 	}
@@ -136,7 +146,7 @@ class G1NewsCrawler {
 		headline = $(headline).text();
 
 		if(headline) {
-			parsedNews['headline'] = headline;
+			parsedNews.headline = headline;
 		} else {
 			throw new TypeError('headline not found');
 		}
@@ -145,7 +155,7 @@ class G1NewsCrawler {
 		datePublished = new Date( $(datePublished).attr('datetime') ).getTime();
 
 		if(datePublished) {
-			parsedNews['datePublished'] = datePublished;
+			parsedNews.datePublished = datePublished;
 		} else {
 			throw new TypeError('date of publication not found');
 		}
@@ -153,7 +163,7 @@ class G1NewsCrawler {
 		const content = $('.content-text__container').text();
 		
 		if(content) {
-			parsedNews['content'] = content;
+			parsedNews.content = content;
 		} else {
 			throw new TypeError('content not found');
 		}

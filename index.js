@@ -1,9 +1,10 @@
 'use strict';
 
-const G1NewsCrawler = require("./crawlers/g1-news-crawler");
+/* REQUIRES */
+const NewsCrawler = require('./news-crawler');
 
-const crawler = new G1NewsCrawler();
-crawler.fetchNews('economy', 1900, 50).then( args => { console.log(args); } );
+const crawler = new NewsCrawler();
+crawler.fetchNews('g1', 'economy', 1, 1).then( news => { console.log(news); } );
 
 
 // /**************
