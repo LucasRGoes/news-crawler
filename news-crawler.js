@@ -62,10 +62,12 @@ class NewsCrawler {
 			try {
 
 				const fetchedNews = await crawler.fetchNews(category, fromPage, numberPages); // jshint ignore:line
-				news = new Set([ news, fetchedNews ]);
+				for(let n of fetchedNews) {
+					news.add(n);
+				}
 
 			} catch(error) {
-				this._logger.error( `Source '${s}'' couldn't be fetched`, error );
+				this._logger.error( `Source '${s}'' couldn't be fetched (${error})` );
 			}
 
 		}

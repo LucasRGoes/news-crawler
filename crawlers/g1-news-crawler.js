@@ -5,6 +5,7 @@ const cheerio = require('cheerio');									// Cheerio: Fast, flexible & lean im
 const request = require('request-promise-native');					// Request: The simplified HTTP request client 'request' with Promise support.
 const { createLogger, format, transports } = require('winston');	// Winston: A logger for just about everything.
 const { combine, timestamp, label, printf } = format;
+const NaturalLanguageUnderstandingV1 = require('watson-developer-cloud-async/natural-language-understanding/v1.js');	// NaturalLanguageUnderstandingV1: Analyze text to extract meta-data from content such as concepts, entities, keywords, categories, sentiment, emotion, relations, semantic roles, using natural language understanding.
 
 /* CLASS */
 class G1NewsCrawler {
@@ -25,6 +26,12 @@ class G1NewsCrawler {
 			transports: [
 				new transports.Console()
 			]
+		});
+
+		this._nlu = new NaturalLanguageUnderstandingV1({
+			username: process.env.WATSON_USERNAME,
+			password: process.env.WATSON_PASSWORD,
+			version_date: NaturalLanguageUnderstandingV1.VERSION_DATE_2017_02_27
 		});
 
 	}
@@ -68,12 +75,31 @@ class G1NewsCrawler {
 				requestOptions.uri = link;
 
 				try {
+
 					// Parses content within the news
-					const parsedNews = this._parseNews( await request(requestOptions) ); // jshint ignore:line
+					let parsedNews = this._parseNews( await request(requestOptions) ); // jshint ignore:line
+
+					// Uses Watson service for natural language understanding
+					const watsonResponse = await this._nlu.analyze({ // jshint ignore:line
+						text: parsedNews.content,
+						features: {
+							keywords: {
+								limit: 10
+							},
+							sentiment: {}
+						},
+						language: 'pt'
+					});
+
+					// Adds the analysis response to the parsed news
+					parsedNews.sentiment = watsonResponse.sentiment.document;
+					parsedNews.keywords = watsonResponse.keywords;
 					parsedNews.category = category;
+
 					news.add(parsedNews);
+
 				} catch(error) {
-					this._logger.error( `${link} couldn't have its contents fetched`, error );
+					this._logger.error( `${link} couldn't have its contents fetched (${ JSON.stringify(error) })` );
 				}
 
 			}

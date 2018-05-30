@@ -3,6 +3,9 @@
 /* REQUIRES */
 const NewsCrawler = require('./news-crawler');
 
+// Loading environment variables
+require('dotenv').config();
+
 const crawler = new NewsCrawler();
 crawler.fetchNews('g1', 'economy', 1, 1).then( news => { console.log(news); } );
 
