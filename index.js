@@ -53,11 +53,16 @@ const numberPages = options._all['number-pages'];
 const crawler = new NewsCrawler();
 
 // For all pages requested
-for(let page = fromPage; page < fromPage + numberPages; page++) {
-	crawler.fetchNews(source, category, fromPage, 1).then( news => {
+async function run() { // jshint ignore:line
 
-		let newsString = JSON.stringify(news);
+	for(let page = fromPage; page < fromPage + numberPages; page++) {
+		const news = await crawler.fetchNews(source, category, page, 1); // jshint ignore:line
+		let newsString = JSON.stringify( Array.from(news) );
 		fs.writeFileSync(`${directory}/page_${page}.json`, newsString, 'utf8');
+	}
 
-	});
 }
+
+run()
+	.then( args => process.exit() )
+	.catch( error => console.log(error) );

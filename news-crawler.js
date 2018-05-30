@@ -54,8 +54,8 @@ class NewsCrawler {
 		}
 
 		// Starting crawler
-		this._logger.info( `Starting ...` );
-		const started = Date.now();
+		// this._logger.info( `Starting ...` );
+		// const started = Date.now();
 
 		// Fetching sources
 		let news = new Set();
@@ -77,9 +77,9 @@ class NewsCrawler {
 		}
 
 		// Ending crawler
-		const ended = Date.now();
-		this._logger.info( `The crawler has taken ${(ended - started) / 1000}s for total fetching` );
-		this._logger.info( `${news.size} news have been fetched on total` );
+		// const ended = Date.now();
+		// this._logger.info( `The crawler has taken ${(ended - started) / 1000}s for total fetching` );
+		// this._logger.info( `${news.size} news have been fetched on total` );
 
 		return news;
 
