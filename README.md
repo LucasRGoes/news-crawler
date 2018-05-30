@@ -1,2 +1,3 @@
 # news-crawler
-Crawler for news sites
+
+News crawler and content classifier
