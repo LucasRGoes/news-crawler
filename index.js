@@ -1,68 +1,63 @@
 'use strict';
 
 /* REQUIRES */
-const NewsCrawler = require('./news-crawler');
+const fs = require('fs');								// File System: The fs module provides an API for interacting with the file system in a manner closely modeled around standard POSIX functions.
+const NewsCrawler = require('./news-crawler');			// NewsCrawler: Crawler made for news extraction and natural language analysis from different sources.
+const CommandLineArgs = require('command-line-args');	// CommandLineArgs: A mature, feature-complete library to parse command-line options.
+const CommandLineUsage = require('command-line-usage');	// CommandLineUsage: A simple, data-driven module for creating a usage guide.
 
 // Loading environment variables
 require('dotenv').config();
 
+// Sets options for command line arguments and parses then
+const optionDefinitions = [
+
+	{ name: 'help', alias: 'h', type: Boolean, description: 'Display this usage guide', group: 'main' },
+
+	{ name: 'source', alias: 's', type: String, defaultValue: 'g1', description: 'The source used to fetch the news', group: 'content' },
+	{ name: 'category', alias: 'c', type: String, defaultValue: 'economy', description: 'The category to be fetched', group: 'content' },
+	
+	{ name: 'directory', alias: 'd', type: String, defaultValue: '.', description: 'Directory for saving the fetched data', group: 'file' },
+	
+	{ name: 'from-page', type: Number, defaultValue: 1, description: 'Starting page', group: 'pages' },
+	{ name: 'number-pages', type: Number, defaultValue: 10, description: 'Number of pages to fetch', group: 'pages' }
+
+];
+
+const sections = [
+
+	{ header: 'NewsCrawler', content: 'Crawler made for news extraction and natural language analysis from different sources.' },
+	{ header: 'Main', optionList: optionDefinitions, group: 'main' },
+	{ header: 'Content Options', optionList: optionDefinitions, group: 'content' },
+	{ header: 'File Options', optionList: optionDefinitions, group: 'file' },
+	{ header: 'Pages Options', optionList: optionDefinitions, group: 'pages' },
+
+];
+const usage = CommandLineUsage(sections);
+const options = CommandLineArgs(optionDefinitions);
+
+// Help requested
+if(options._all.help) {
+	console.log(usage);
+	process.exit();
+}
+
+// Parsed data
+const source = options._all.source;
+const category = options._all.category;
+const directory = options._all.directory;
+const fromPage = options._all['from-page'];
+const numberPages = options._all['number-pages'];
+
+// Starts crawler
 const crawler = new NewsCrawler();
-crawler.fetchNews('g1', 'economy', 1, 1).then( news => { console.log(news); } );
 
+// For all pages requested
+for(let page = fromPage; page < fromPage + numberPages; page++) {
+	crawler.fetchNews(source, category, fromPage, 1).then( news => {
 
-// /**************
-//  * LIBRARIES
-//  **************/
-// const Args = require("args-parser")(process.argv)			 // Straight-forward node.js arguments parser
-// const NewsCrawler = require("./src/main/news-crawler")
+		let newsString = JSON.stringify(news);
+		fs.writeFileSync(`${directory}/page_${page}.json`, newsString, 'utf8');
 
-// /**************
-//  * FUNCTIONS
-//  **************/
-// const argsHandler = () => {
-
-// 	// HELP
-// 	if(Args["h"] || Args["help"]) {
-
-// 		console.log(
-// 			"Usage: news-crawler [options]\n\n" +
-// 			"Options:\n" +
-// 			"  -h, --help 		prints module help\n" +
-// 			"  -c, --category 	the category to be searched for\n" +
-// 			"  --from-page		search starts from the selected page\n" +
-// 			"  --number-pages	searches for the chosen number of pages"
-// 		)
-// 		process.exit();
-
-// 	}
-
-// 	// CATEGORY
-// 	if(!Args["c"] && !Args["category"]) {
-// 		Args["category"] = "world"
-// 	} else if(!Args["category"]) {
-// 		Args["category"] = Args["c"]
-// 	}
-
-// 	// FROM PAGE
-// 	if(!Args["from-page"]) {
-// 		Args["from-page"] = 1
-// 	}
-
-// 	// NUMBER PAGES
-// 	if(!Args["number-pages"]) {
-// 		Args["number-pages"] = 10
-// 	}
-
-// }
-
-// /**************
-//  * MAIN
-//  **************/
-// argsHandler();
-
-// NewsCrawler.fetchNews(Args["category"], Args["from-page"], Args["number-pages"])
-// 	.then(response => process.exit())
-// 	.catch(error => {
-// 		console.log(error)
-// 		process.exit()
-// 	})
+	});
+}

@@ -53,6 +53,10 @@ class NewsCrawler {
 			throw RangeError( `fromPage needs to be higher than zero` );
 		}
 
+		// Starting crawler
+		this._logger.info( `Starting ...` );
+		const started = Date.now();
+
 		// Fetching sources
 		let news = new Set();
 		for(let s of source) {
@@ -71,6 +75,11 @@ class NewsCrawler {
 			}
 
 		}
+
+		// Ending crawler
+		const ended = Date.now();
+		this._logger.info( `The crawler has taken ${(ended - started) / 1000}s for total fetching` );
+		this._logger.info( `${news.size} news have been fetched on total` );
 
 		return news;
 
