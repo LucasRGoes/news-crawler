@@ -1,111 +1,67 @@
-from pymongo import MongoClient
-import pandas as pd
-from matplotlib import pyplot
-import json
 from neo4j.v1 import GraphDatabase
-import time
-import plotly.graph_objs as go
-import plotly.offline as py
-import plotly
+from pymongo import MongoClient
+import datetime
+import matplotlib.pyplot as plt
 
+def main():
+    # connect neo4j
+    neo4j = GraphDatabase.driver(
+        "bolt://localhost:7687", auth=("neo4j", "1230"))
 
-uri = "bolt://localhost:7687"
-auth = ("neo4j", "1230")
-driver = GraphDatabase.driver(uri, auth=auth)
-session = driver.session()
+    # get news
+    #q = "MATCH (n:Keyword) WHERE lower(n.text) contains 'petrobras' RETURN n"
+    #q = "MATCH (n:News) WHERE n.headline = 'Bovespa fecha em leve alta; BRF cai quase 20% e perde quase R$ 5 bi em valor de mercado' RETURN n"
+    #q = "MATCH (n:News) WHERE lower(n.headline) contains 'petrobras' AND n.sentiment > '0' RETURN n"
+    #q = "MATCH (n:News)-[r:Presense]->(k:Keyword)  WHERE lower(k.text) contains 'petrobras' AND lower(n.headline) contains 'petrobras' RETURN n"
+    q = ("MATCH (n:News) "
+         "WHERE lower(n.headline) contains 'petrobras' AND "
+         "n.sentiment <> '0' "
+         "RETURN n")
+    news = neo4j.session().run(q)
+    news = [n["n"] for n in news]
+    print(len(news), "news")
 
-# create index
-#q = "MATCH (k:Keyword) WHERE lower(k.text) contains 'petrobras' RETURN k"
-#q = "MATCH (n:News) WHERE n.headline = 'Bovespa fecha em leve alta; BRF cai quase 20% e perde quase R$ 5 bi em valor de mercado' RETURN n"
-#q = "MATCH (n:News) WHERE lower(n.headline) contains 'petrobras' AND n.sentiment > '0' RETURN n"
-#q = "MATCH (n:News)-[r:Presense]->(k:Keyword)  WHERE lower(k.text) contains 'petrobras' AND lower(n.headline) contains 'petrobras' RETURN n"
-q = "MATCH (n:News) WHERE lower(n.headline) contains 'petrobras' and n.sentiment <> '0'  RETURN n" 
+    # connect mongo
+    mongo = MongoClient("mongodb://localhost:27017/")["test"]["series"]
 
+    # get series
+    series = list(mongo.find(
+        {"codneg": "PETR4"}, {"_id": 0, "preult": 1, "datprg": 1}))
+    series = {datetime.datetime.strptime(str(s["datprg"]), "%Y%m%d"): 
+        s["preult"] for s in series}
+    
+    # get closing price and date
+    prices = [series[s] for s in sorted(series)]
+    dates = [s for s in sorted(series)]
 
-a = session.run(q)
+    # plot series
+    plt.plot(dates, prices, "blue")
 
+    for n in news:
+        # convert news miliseconds to seconds
+        date = int(n["datePublished"]) / 1000
+        # remove news hours, minutes and seconds
+        date -= date % (24*60*60)
+        # convert news epoch to datetime
+        date = datetime.datetime.utcfromtimestamp(date)
+        
+        # calculate time delta before and after the news
+        space = [date + datetime.timedelta(days=i) for i in range(-3, 4)]
 
-lista = [b["n"] for b in a]
+        # get news closing price and date in series
+        price = [series[s] for s in space if s in series]
+        date = [s for s in space if s in series]
 
-print(len(lista))
+        # set plot color by sentiment
+        if float(n["sentiment"]) > 0:
+            color = "green"
+        else:
+            color = "red"
 
-'''
-for l in lista:
-    print(l)
+        plt.plot(date, price, color, linewidth=7)
 
+    # show plot
+    plt.show()
 
-
-for l in lista:
-    try:
-        print(l)
-        tempo = time.localtime(int(l["datePublished"])/1000)
-        tempostr = time.strftime('%Y%m%d', tempo)
-
-        tempo = int(tempostr)
-        print(tempo,tempo-5, tempo+5)
-
-        uri = "mongodb://localhost:27017/"
-        client = MongoClient(uri)
-        db = client["test"]
-        coll = db["acoes"]
-
-        series = coll.find({"codneg": "PETR4", 
-                            "datprg": {'$gt':tempo-5, '$lt': tempo+5} },
-                            {"_id": 0} )
-
-        j = [s for s in series]
-        print(j)
-        j = json.dumps(j)
-        df = pd.read_json(j)
-
-        df["preult"].plot(style='k--', label='Series') 
-        df["preabe"].plot()
-        pyplot.show()
-    except:
-        print("\n\n\ndeu ruim\n\n\n")
-
-
-'''
-tempo = time.localtime(int(lista[0]["datePublished"])/1000)
-tempostr = time.strftime('%Y%m%d', tempo)
-
-tempo = int(tempostr)
-print(tempo,tempo-5, tempo+5)
-
-uri = "mongodb://localhost:27017/"
-client = MongoClient(uri)
-db = client["test"]
-coll = db["acoes"]
-
-#series = coll.find({"codneg": "PETR4", 
-              #      "datprg": {'$gt':tempo-5, '$lt': tempo+5} },
-               #     {"_id": 0} )
-series = coll.find({"codneg": "PETR4"}, 
-                    {"_id": 0} )
-
-               
-j = [s for s in series]
-j = json.dumps(j)
-df = pd.read_json(j)
-
-x1 = df["datprg"]
-y1 = df["preult"]
-data   = [go.Scatter(x=x1, y=y1)]
-layout = go.Layout(
-    xaxis=dict(
-        range=['19980316', '20180101'],
-        title='Ano'
-    ),
-    yaxis=dict(
-        range=[min(x1), max(y1)],
-        title='Valor da Acao'
-    ))
-
-#fig = go.Figure(data=data, layout=layout)
-#py.iplot(fig)
-
-df["preult"].plot(title='Stocks', x='time') 
-#df["preabe"].plot()
-pyplot.show()
-
-
+if __name__ == "__main__":
+    main()
