@@ -43,7 +43,7 @@ def main():
     uri = "mongodb://localhost:27017/"
     client = MongoClient(uri)
     db = client["test"]
-    coll = db["series"]
+    coll = db["acoes"]
 
     # insert series
     df = pd.read_csv("mongo.csv")
